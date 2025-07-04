@@ -1,5 +1,6 @@
 package com.hf.cloudpicture.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -8,9 +9,15 @@ import com.hf.cloudpicture.exception.ErrorCode;
 import com.hf.cloudpicture.modle.entity.User;
 import com.hf.cloudpicture.modle.enums.UserRoleEnum;
 import com.hf.cloudpicture.mapper.UserMapper;
+import com.hf.cloudpicture.modle.vo.LoginUserVO;
 import com.hf.cloudpicture.service.UserService;
+import org.omg.PortableInterceptor.USER_EXCEPTION;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import javax.servlet.http.HttpServletRequest;
+
+import static com.hf.cloudpicture.constant.UserConstant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * @author HF
@@ -70,6 +77,61 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         return user.getId();
     }
+
+    @Override
+    public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
+        //检验参数
+        if (StrUtil.hasBlank(userAccount, userPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不能为空");
+        }
+        if (userAccount.length() < 4){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号错误");
+        }
+        if (userPassword.length() < 8){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码错误");
+        }
+        //对用户传递的密码进行加密
+        String encryptPassword = getEncryptPassword(userPassword);
+        //查询数据库中的用户是否存在
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userAccount", userAccount);
+        queryWrapper.eq("userPassword", encryptPassword);
+        User user = this.baseMapper.selectOne(queryWrapper);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
+        }
+        //保存用户的登陆态
+        request.getSession().setAttribute(USER_LOGIN_STATE, user);
+        return this.getLoginUserVO(user);
+    }
+
+    @Override
+    public LoginUserVO getLoginUserVO(User user) {
+        if (user == null){
+            return null;
+        }
+        LoginUserVO loginUserVO = new LoginUserVO();
+        BeanUtil.copyProperties(user, loginUserVO);
+        return loginUserVO;
+    }
+
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        // 先判断是否已登录
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 从数据库查询（追求性能的话可以注释，直接返回上述结果）
+        long userId = currentUser.getId();
+        currentUser =  this.getById(userId);
+        if (currentUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        return currentUser;
+    }
+
 
     /**
      * 获取加密密码
