@@ -1,7 +1,7 @@
 server:
   port: 3939
   servlet:
-      context-path: /api
+    context-path: /api
 
 spring:
   application:
