@@ -11,13 +11,12 @@ import com.hf.cloudpicture.modle.enums.UserRoleEnum;
 import com.hf.cloudpicture.mapper.UserMapper;
 import com.hf.cloudpicture.modle.vo.LoginUserVO;
 import com.hf.cloudpicture.service.UserService;
-import org.omg.PortableInterceptor.USER_EXCEPTION;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static com.hf.cloudpicture.constant.UserConstant.UserConstant.USER_LOGIN_STATE;
+import static com.hf.cloudpicture.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * @author HF
@@ -78,6 +77,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return user.getId();
     }
 
+    /**
+     * 用户登录
+     *
+     * @param request
+     * @return
+     */
     @Override
     public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
         //检验参数
@@ -115,6 +120,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return loginUserVO;
     }
 
+    /**
+     * 获取当前登录用户
+     * @param request
+     * @return
+     */
     @Override
     public User getLoginUser(HttpServletRequest request) {
         // 先判断是否已登录
@@ -132,7 +142,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return currentUser;
     }
 
-
     /**
      * 获取加密密码
      *
@@ -144,6 +153,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 加盐
         final String SALT = "hf";
         return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+    }
+
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+        //判断用户是否登陆
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User currentUser = (User) userObj;
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        //移除登录态
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
+        return true;
     }
 }
 
