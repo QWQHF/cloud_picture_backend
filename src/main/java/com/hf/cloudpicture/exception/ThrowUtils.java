@@ -31,7 +31,7 @@ public class ThrowUtils {
      * @param errorCode
      * @param message
      */
-    public static void trowIf(boolean condition, ErrorCode errorCode, String message) {
+    public static void throwIf(boolean condition, ErrorCode errorCode, String message) {
         throwIf(condition, new BusinessException(errorCode, message));
     }
 }
