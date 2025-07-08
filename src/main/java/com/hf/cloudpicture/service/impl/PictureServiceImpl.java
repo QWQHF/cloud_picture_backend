@@ -9,7 +9,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hf.cloudpicture.exception.BusinessException;
 import com.hf.cloudpicture.exception.ErrorCode;
 import com.hf.cloudpicture.exception.ThrowUtils;
-import com.hf.cloudpicture.manager.FileManager;
+import com.hf.cloudpicture.manager.upload.FilePictureUpload;
+import com.hf.cloudpicture.manager.upload.PictureUploadTemplate;
+import com.hf.cloudpicture.manager.upload.UrlPictureUpload;
 import com.hf.cloudpicture.mapper.PictureMapper;
 import com.hf.cloudpicture.modle.dto.file.UploadPictureResult;
 import com.hf.cloudpicture.modle.dto.picture.PictureQueryRequest;
@@ -23,9 +25,7 @@ import com.hf.cloudpicture.modle.vo.UserVO;
 import com.hf.cloudpicture.service.PictureService;
 import com.hf.cloudpicture.service.UserService;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -45,13 +45,16 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         implements PictureService {
 
     @Resource
-    private FileManager fileManager;
-
-    @Resource
     private UserService userService;
 
+    @Resource
+    private FilePictureUpload filePictureUpload;
+
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
+
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+    public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         ThrowUtils.throwIf(loginUser == null, ErrorCode.NO_AUTH_ERROR);
         // 用于判断是新增还是更新图片
         Long pictureId = null;
@@ -61,8 +64,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 如果是更新图片，需要校验图片是否存在
         if (pictureId != null) {
             Picture oldPicture = this.getById(pictureId);
-            ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-            // 仅本人或管理员可编辑
+            ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+            // 仅本人或管理者可编辑
             if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             }
@@ -70,7 +73,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 上传图片，得到信息
         // 按照用户id划分目录
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
-        UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+        // 根据inputSource类型区分上传方式
+        PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+        if (inputSource instanceof String) {
+            pictureUploadTemplate = urlPictureUpload;
+        }
+        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
         // 构造要入库的图片的信息
         Picture picture = new Picture();
         picture.setUrl(uploadPictureResult.getUrl());
