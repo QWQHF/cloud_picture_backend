@@ -10,12 +10,10 @@ import com.hf.cloudpicture.constant.UserConstant;
 import com.hf.cloudpicture.exception.BusinessException;
 import com.hf.cloudpicture.exception.ErrorCode;
 import com.hf.cloudpicture.exception.ThrowUtils;
-import com.hf.cloudpicture.modle.dto.picture.PictureEditRequest;
-import com.hf.cloudpicture.modle.dto.picture.PictureQueryRequest;
-import com.hf.cloudpicture.modle.dto.picture.PictureUpdateRequest;
-import com.hf.cloudpicture.modle.dto.picture.PictureUploadRequest;
+import com.hf.cloudpicture.modle.dto.picture.*;
 import com.hf.cloudpicture.modle.entity.Picture;
 import com.hf.cloudpicture.modle.entity.User;
+import com.hf.cloudpicture.modle.enums.PictureReviewStatusEnum;
 import com.hf.cloudpicture.modle.vo.PictureVO;
 import com.hf.cloudpicture.service.PictureService;
 import com.hf.cloudpicture.service.UserService;
@@ -79,7 +77,7 @@ public class PictureController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest) {
+    public BaseResponse<Boolean> updatePicture(@RequestBody PictureUpdateRequest pictureUpdateRequest, HttpServletRequest request) {
         if (pictureUpdateRequest == null || pictureUpdateRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -94,6 +92,9 @@ public class PictureController {
         long id = pictureUpdateRequest.getId();
         Picture oldPicture = pictureService.getById(id);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+        // 补充审核参数
+        User loginUser =userService.getLoginUser(request);
+        pictureService.fillReviewParams(picture, loginUser);
         // 操作数据库
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
@@ -151,6 +152,8 @@ public class PictureController {
         long size = pictureQueryRequest.getPageSize();
         // 限制爬虫
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 普通用户默认只能看到审核通过的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
                 pictureService.getQueryWrapper(pictureQueryRequest));
@@ -176,6 +179,8 @@ public class PictureController {
         // 数据校验
         pictureService.validPicture(picture);
         User loginUser = userService.getLoginUser(request);
+        // 补充审核参数
+        pictureService.fillReviewParams(picture, loginUser);
         // 判断是否存在
         long id = pictureEditRequest.getId();
         Picture oldPicture = pictureService.getById(id);
@@ -190,6 +195,9 @@ public class PictureController {
         return ResultUtils.success(true);
     }
 
+    /**
+     * 获取标签分类
+     */
     @GetMapping("/tag_category")
     public BaseResponse<PictureTagCategory> listPictureTagCategory() {
         PictureTagCategory pictureTagCategory = new PictureTagCategory();
@@ -200,5 +208,15 @@ public class PictureController {
         return ResultUtils.success(pictureTagCategory);
     }
 
-
+    /**
+     * 图片审核
+     */
+    @PostMapping("/review")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> reviewPicture(@RequestBody PictureReviewRequest pictureReviewRequest, HttpServletRequest request) {
+        ThrowUtils.throwIf(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+        User loginUser = userService.getLoginUser(request);
+        pictureService.doPictureReview(pictureReviewRequest, loginUser);
+        return ResultUtils.success(true);
+    }
 }

@@ -3,6 +3,7 @@ package com.hf.cloudpicture.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hf.cloudpicture.modle.dto.picture.PictureQueryRequest;
+import com.hf.cloudpicture.modle.dto.picture.PictureReviewRequest;
 import com.hf.cloudpicture.modle.dto.picture.PictureUploadRequest;
 import com.hf.cloudpicture.modle.entity.Picture;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -55,4 +56,18 @@ public interface PictureService extends IService<Picture> {
      * @param picture
      */
     void validPicture(Picture picture);
+
+    /**
+     * 图片审核
+     * @param pictureReviewRequest
+     * @param loginUser
+     */
+    void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
+
+    /**
+     * 填充审核参数
+     * @param picture
+     * @param loginUser
+     */
+    void fillReviewParams(Picture picture, User loginUser);
 }
