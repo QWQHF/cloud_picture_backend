@@ -20,8 +20,19 @@ spring:
     timeout: 5000
   # 开放更大的文件上传体积
   servlet:
+    context-path: /api
+    # cookie 30 天过期
+    session:
+      cookie:
+        max-age: 2592000
     multipart:
       max-file-size: 10MB
+  # session 配置
+  session:
+    store-type: redis
+    # session 30 天过期
+    timeout: 2592000
+
 
 mybatis-plus:
   configuration:
