@@ -14,13 +14,13 @@ import java.io.Serializable;
 public class BaseResponse<T> implements Serializable {
     private int code;
 
-    private T date;
+    private T data;
 
     private String message;
 
     public BaseResponse(int code, T data, String message) {
         this.code = code;
-        this.date = data;
+        this.data = data;
         this.message = message;
     }
 
@@ -30,9 +30,5 @@ public class BaseResponse<T> implements Serializable {
 
     public BaseResponse(ErrorCode errorCode) {
         this(errorCode.getCode(), null, errorCode.getMessage());
-    }
-
-    public T getData() {
-        return date;
     }
 }
