@@ -2,6 +2,7 @@ package com.hf.cloudpicture.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.hf.cloudpicture.api.aliyunai.model.CreateOutPaintingTaskResponse;
 import com.hf.cloudpicture.manager.upload.PictureUploadTemplate;
 import com.hf.cloudpicture.modle.dto.picture.*;
 import com.hf.cloudpicture.modle.entity.Picture;
@@ -130,4 +131,5 @@ public interface PictureService extends IService<Picture> {
     void editPictureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
 
 
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
 }
